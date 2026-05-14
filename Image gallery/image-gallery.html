@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LENS — Image Gallery</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #0e0e0e;
+    --paper: #f5f2ed;
+    --cream: #ede9e2;
+    --accent: #c8452a;
+    --muted: #8a8278;
+    --white: #ffffff;
+    --transition: 0.38s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ─── HEADER ─────────────────────────────── */
+  header {
+    padding: 28px 48px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    border-bottom: 1.5px solid var(--ink);
+  }
+
+  .logo {
+    font-family: 'Playfair Display', serif;
+    font-size: 38px;
+    font-weight: 700;
+    letter-spacing: -1px;
+    line-height: 1;
+  }
+
+  .logo span { color: var(--accent); font-style: italic; }
+
+  .header-meta {
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  /* ─── FILTER BAR ─────────────────────────── */
+  .filter-bar {
+    display: flex;
+    gap: 0;
+    padding: 0 48px;
+    border-bottom: 1.5px solid var(--ink);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .filter-bar::-webkit-scrollbar { display: none; }
+
+  .filter-btn {
+    background: none;
+    border: none;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 16px 22px;
+    cursor: pointer;
+    position: relative;
+    white-space: nowrap;
+    transition: color 0.2s;
+  }
+
+  .filter-btn::after {
+    content: '';
+    position: absolute;
+    bottom: -1.5px; left: 0; right: 0;
+    height: 2.5px;
+    background: var(--accent);
+    transform: scaleX(0);
+    transition: transform 0.25s cubic-bezier(0.4,0,0.2,1);
+  }
+
+  .filter-btn:hover { color: var(--ink); }
+  .filter-btn.active { color: var(--ink); }
+  .filter-btn.active::after { transform: scaleX(1); }
+
+  /* ─── MAIN LAYOUT ────────────────────────── */
+  main { padding: 40px 48px 60px; }
+
+  .section-label {
+    font-size: 10px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--cream);
+  }
+
+  /* ─── GRID ───────────────────────────────── */
+  .gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 3px;
+  }
+
+  .gallery-item {
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+    background: var(--cream);
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+  }
+
+  .gallery-item.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* Featured large item */
+  .gallery-item.featured {
+    grid-column: span 2;
+    grid-row: span 2;
+  }
+
+  .gallery-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform var(--transition), filter var(--transition);
+    filter: saturate(0.9);
+  }
+
+  .gallery-item:hover img {
+    transform: scale(1.06);
+    filter: saturate(1.1);
+  }
+
+  /* Aspect ratios */
+  .gallery-item:not(.featured) { aspect-ratio: 4/3; }
+  .gallery-item.featured { aspect-ratio: auto; min-height: 420px; }
+
+  /* Overlay */
+  .overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(14,14,14,0.7) 0%, transparent 55%);
+    opacity: 0;
+    transition: opacity var(--transition);
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 20px;
+  }
+
+  .gallery-item:hover .overlay { opacity: 1; }
+
+  .overlay-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 16px;
+    color: var(--white);
+    transform: translateY(8px);
+    transition: transform var(--transition);
+  }
+
+  .gallery-item:hover .overlay-title { transform: translateY(0); }
+
+  .overlay-cat {
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 4px;
+    transform: translateY(8px);
+    transition: transform var(--transition) 0.04s;
+  }
+
+  .gallery-item:hover .overlay-cat { transform: translateY(0); }
+
+  /* Expand icon */
+  .expand-icon {
+    position: absolute;
+    top: 14px; right: 14px;
+    width: 34px; height: 34px;
+    background: rgba(255,255,255,0.15);
+    backdrop-filter: blur(6px);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0;
+    transform: scale(0.7);
+    transition: opacity 0.25s, transform 0.25s;
+    color: white;
+    font-size: 14px;
+  }
+
+  .gallery-item:hover .expand-icon {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  /* Filter tag badge */
+  .cat-badge {
+    position: absolute;
+    top: 12px; left: 12px;
+    font-size: 9px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    background: var(--white);
+    color: var(--ink);
+    padding: 4px 9px;
+    font-weight: 500;
+  }
+
+  /* Hidden items */
+  .gallery-item.hidden {
+    display: none;
+  }
+
+  /* ─── LIGHTBOX ───────────────────────────── */
+  .lightbox {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+  }
+
+  .lightbox.open {
+    opacity: 1;
+    pointer-events: all;
+  }
+
+  .lb-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(14,14,14,0.92);
+    backdrop-filter: blur(8px);
+  }
+
+  .lb-container {
+    position: relative;
+    z-index: 1;
+    max-width: 90vw;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transform: scale(0.92);
+    transition: transform 0.35s cubic-bezier(0.34,1.56,0.64,1);
+  }
+
+  .lightbox.open .lb-container { transform: scale(1); }
+
+  .lb-img-wrap {
+    position: relative;
+    line-height: 0;
+  }
+
+  .lb-img-wrap img {
+    max-width: 80vw;
+    max-height: 72vh;
+    object-fit: contain;
+    display: block;
+    box-shadow: 0 40px 80px rgba(0,0,0,0.6);
+  }
+
+  .lb-info {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 0 0;
+    color: rgba(255,255,255,0.85);
+  }
+
+  .lb-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 18px;
+  }
+
+  .lb-cat {
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-top: 4px;
+  }
+
+  .lb-counter {
+    font-size: 12px;
+    letter-spacing: 1px;
+    color: rgba(255,255,255,0.4);
+  }
+
+  /* Nav arrows */
+  .lb-btn {
+    position: absolute;
+    top: 50%; transform: translateY(-50%);
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15);
+    color: white;
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    font-size: 20px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.2s, transform 0.2s;
+    z-index: 2;
+  }
+
+  .lb-btn:hover { background: rgba(255,255,255,0.18); transform: translateY(-50%) scale(1.08); }
+  .lb-prev { left: -70px; }
+  .lb-next { right: -70px; }
+
+  .lb-close {
+    position: fixed;
+    top: 24px; right: 24px;
+    background: none;
+    border: 1.5px solid rgba(255,255,255,0.3);
+    color: white;
+    width: 42px; height: 42px;
+    border-radius: 50%;
+    font-size: 18px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.2s;
+    z-index: 10;
+  }
+
+  .lb-close:hover { background: rgba(255,255,255,0.12); }
+
+  /* Filter strip in lightbox */
+  .lb-filters {
+    display: flex;
+    gap: 8px;
+    margin-top: 14px;
+  }
+
+  .lb-filter-btn {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15);
+    color: rgba(255,255,255,0.6);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    padding: 6px 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .lb-filter-btn:hover, .lb-filter-btn.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+  }
+
+  /* ─── RESPONSIVE ─────────────────────────── */
+  @media (max-width: 900px) {
+    header { padding: 20px 24px 16px; }
+    .filter-bar { padding: 0 24px; }
+    main { padding: 28px 24px 40px; }
+    .gallery-grid { grid-template-columns: repeat(2, 1fr); gap: 2px; }
+    .gallery-item.featured { grid-column: span 2; min-height: 280px; }
+    .lb-prev { left: -48px; }
+    .lb-next { right: -48px; }
+  }
+
+  @media (max-width: 560px) {
+    .logo { font-size: 28px; }
+    header { flex-direction: column; align-items: flex-start; gap: 6px; }
+    .gallery-grid { grid-template-columns: 1fr 1fr; }
+    .gallery-item.featured { grid-column: span 2; min-height: 220px; }
+    .lb-btn { display: none; }
+    .lb-img-wrap img { max-width: 95vw; max-height: 65vh; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">LEN<span>S</span></div>
+  <div class="header-meta">Photography &amp; Visual Arts Gallery</div>
+</header>
+
+<nav class="filter-bar">
+  <button class="filter-btn active" data-cat="all">All</button>
+  <button class="filter-btn" data-cat="nature">Nature</button>
+  <button class="filter-btn" data-cat="architecture">Architecture</button>
+  <button class="filter-btn" data-cat="portrait">Portrait</button>
+  <button class="filter-btn" data-cat="travel">Travel</button>
+  <button class="filter-btn" data-cat="abstract">Abstract</button>
+</nav>
+
+<main>
+  <div class="section-label">Gallery Collection — 12 Works</div>
+
+  <div class="gallery-grid" id="gallery">
+
+    <div class="gallery-item featured" data-cat="nature" data-title="Into the Mist" data-index="0">
+      <img src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=900&q=80" alt="Mountain Mist">
+      <div class="cat-badge">Nature</div>
+      <div class="overlay">
+        <div class="overlay-cat">Nature</div>
+        <div class="overlay-title">Into the Mist</div>
+      </div>
+      <div class="expand-icon">⤢</div>
+    </div>
+
+    <div class="gallery-item" data-cat="architecture" data-title="Steel & Sky" data-index="1">
+      <img src="https://images.unsplash.com/photo-1486325212027-8081e485255e?w=600&q=80" alt="Architecture">
+      <div class="cat-badge">Architecture</div>
+      <div class="overlay">
+        <div class="overlay-cat">Architecture</div>
+        <div class="overlay-title">Steel &amp; Sky</div>
+      </div>
+      <div class="expand-icon">⤢</div>
+    </div>
+
+    <div class="gallery-item" data-cat="portrait" data-title="Golden Hour" data-index="2">
+      <img src="https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=600&q=80" alt="Portrait">
+      <div class="cat-badge">Portrait</div>
+      <div class="overlay">
+        <div class="overlay-cat">Portrait</div>
+        <div class="overlay-title">Golden Hour</div>
+      </div>
+      <div class="expand-icon">⤢</div>
+    </div>
+
+    <div class="gallery-item" data-cat="travel" data-title="Marrakech Maze" data-index="3">
+      <img src="https://images.unsplash.com/photo-1539020140153-e479b8c22e70?w=600&q=80" alt="Travel">
+      <div class="cat-badge">Travel</div>
+      <div class="overlay">
+        <div class="overlay-cat">Travel</div>
+        <div class="overlay-title">Marrakech Maze</div>
+      </div>
+      <div class="expand-icon">⤢</div>
+    </div>
+
+    <div class="gallery-item" data-cat="abstract" data-title="Fracture Lines" data-index="4">
+      <img src="https://images.unsplash.com/photo-1541701494587-cb58502866ab?w=600&q=80" alt="Abstract">
+      <div class="cat-badge">Abstract</div>
+      <div class="overlay">
+        <div class="overlay-cat">Abstract</div>
+        <div class="overlay-title">Fracture Lines</div>
+      </div>
+      <div class="expand-icon">⤢</div>
+    </div>
+
+    <div class="gallery-item" data-cat="nature" data-title="Desert Bloom" data-index="5">
+      <img src="https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?w=600&q=80" alt="Desert">
+      <div class="cat-badge">Nature</div>
+      <div class="overlay">
+        <div class="overlay-cat">Nature</div>
+        <div class="overlay-title">Desert Bloom</div>
+      </div>
+      <div class="expand-icon">⤢</div>
+    </div>
+
+    <div class="gallery-item" data-cat="architecture" data-title="The Corridor" data-index="6">
+      <img src="https://images.unsplash.com/photo-1493246507139-91e8fad9978e?w=600&q=80" alt="Corridor">
+      <div class="cat-badge">Architecture</div>
+      <div class="overlay">
+        <div class="overlay-cat">Architecture</div>
+        <div class="overlay-title">The Corridor</div>
+      </div>
+      <div class="expand-icon">⤢</div>
+    </div>
+
+    <div class="gallery-item" data-cat="portrait" data-title="Contemplation" data-index="7">
+      <img src="https://images.unsplash.com/photo-1552058544-f2b08422138a?w=600&q=80" alt="Portrait">
+      <div class="cat-badge">Portrait</div>
+      <div class="overlay">
+        <div class="overlay-cat">Portrait</div>
+        <div class="overlay-title">Contemplation</div>
+      </div>
+      <div class="expand-icon">⤢</div>
+    </div>
+
+    <div class="gallery-item" data-cat="travel" data-title="Kyoto Dusk" data-index="8">
+      <img src="https://images.unsplash.com/photo-1528360983277-13d401cdc186?w=600&q=80" alt="Kyoto">
+      <div class="cat-badge">Travel</div>
+      <div class="overlay">
+        <div class="overlay-cat">Travel</div>
+        <div class="overlay-title">Kyoto Dusk</div>
+      </div>
+      <div class="expand-icon">⤢</div>
+    </div>
+
+    <div class="gallery-item" data-cat="abstract" data-title="Ripple Effect" data-index="9">
+      <img src="https://images.unsplash.com/photo-1518640467707-6811f4a6ab73?w=600&q=80" alt="Abstract Ripple">
+      <div class="cat-badge">Abstract</div>
+      <div class="overlay">
+        <div class="overlay-cat">Abstract</div>
+        <div class="overlay-title">Ripple Effect</div>
+      </div>
+      <div class="expand-icon">⤢</div>
+    </div>
+
+    <div class="gallery-item" data-cat="nature" data-title="First Light" data-index="10">
+      <img src="https://images.unsplash.com/photo-1465146344425-f00d5f5c8f07?w=600&q=80" alt="Nature Light">
+      <div class="cat-badge">Nature</div>
+      <div class="overlay">
+        <div class="overlay-cat">Nature</div>
+        <div class="overlay-title">First Light</div>
+      </div>
+      <div class="expand-icon">⤢</div>
+    </div>
+
+    <div class="gallery-item" data-cat="architecture" data-title="Glass Towers" data-index="11">
+      <img src="https://images.unsplash.com/photo-1486325212027-8081e485255e?w=600&q=80" alt="Glass Architecture">
+      <div class="cat-badge">Architecture</div>
+      <div class="overlay">
+        <div class="overlay-cat">Architecture</div>
+        <div class="overlay-title">Glass Towers</div>
+      </div>
+      <div class="expand-icon">⤢</div>
+    </div>
+
+  </div>
+</main>
+
+<!-- LIGHTBOX -->
+<div class="lightbox" id="lightbox">
+  <div class="lb-backdrop" id="lbBackdrop"></div>
+  <button class="lb-close" id="lbClose">✕</button>
+
+  <div class="lb-container">
+    <div class="lb-img-wrap">
+      <button class="lb-btn lb-prev" id="lbPrev">‹</button>
+      <img id="lbImg" src="" alt="">
+      <button class="lb-btn lb-next" id="lbNext">›</button>
+    </div>
+    <div class="lb-info">
+      <div>
+        <div class="lb-title" id="lbTitle"></div>
+        <div class="lb-cat" id="lbCat"></div>
+      </div>
+      <div class="lb-counter" id="lbCounter"></div>
+    </div>
+    <div class="lb-filters">
+      <button class="lb-filter-btn active" data-lb-filter="none">Original</button>
+      <button class="lb-filter-btn" data-lb-filter="grayscale(100%)">B&amp;W</button>
+      <button class="lb-filter-btn" data-lb-filter="sepia(80%)">Sepia</button>
+      <button class="lb-filter-btn" data-lb-filter="saturate(200%) contrast(110%)">Vivid</button>
+      <button class="lb-filter-btn" data-lb-filter="invert(100%)">Invert</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ── Data ───────────────────────────────────────────
+  const items = Array.from(document.querySelectorAll('.gallery-item'));
+  let visibleItems = [...items];
+  let currentIndex = 0;
+  let activeFilter = 'all';
+
+  // ── Entrance animation ─────────────────────────────
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((e, i) => {
+      if (e.isIntersecting) {
+        setTimeout(() => e.target.classList.add('visible'), i * 60);
+        observer.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.05 });
+  items.forEach(item => observer.observe(item));
+
+  // ── Filter logic ───────────────────────────────────
+  document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      activeFilter = btn.dataset.cat;
+
+      items.forEach(item => {
+        const match = activeFilter === 'all' || item.dataset.cat === activeFilter;
+        item.classList.toggle('hidden', !match);
+      });
+
+      visibleItems = items.filter(i => !i.classList.contains('hidden'));
+
+      // Re-animate visible items
+      visibleItems.forEach((item, idx) => {
+        item.classList.remove('visible');
+        setTimeout(() => item.classList.add('visible'), idx * 55);
+      });
+    });
+  });
+
+  // ── Lightbox ───────────────────────────────────────
+  const lightbox = document.getElementById('lightbox');
+  const lbImg    = document.getElementById('lbImg');
+  const lbTitle  = document.getElementById('lbTitle');
+  const lbCat    = document.getElementById('lbCat');
+  const lbCounter= document.getElementById('lbCounter');
+
+  function openLightbox(item) {
+    visibleItems = items.filter(i => !i.classList.contains('hidden'));
+    currentIndex = visibleItems.indexOf(item);
+    showLightboxItem(currentIndex);
+    lightbox.classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function showLightboxItem(idx) {
+    const item = visibleItems[idx];
+    if (!item) return;
+    const img = item.querySelector('img');
+    lbImg.style.opacity = '0';
+    lbImg.style.transform = 'scale(0.97)';
+    setTimeout(() => {
+      lbImg.src = img.src.replace(/w=\d+/, 'w=1200');
+      lbImg.alt = img.alt;
+      lbImg.style.filter = 'none';
+      lbTitle.textContent = item.dataset.title;
+      lbCat.textContent = item.dataset.cat;
+      lbCounter.textContent = `${idx + 1} / ${visibleItems.length}`;
+      document.querySelectorAll('.lb-filter-btn').forEach(b => b.classList.remove('active'));
+      document.querySelector('[data-lb-filter="none"]').classList.add('active');
+      lbImg.style.opacity = '1';
+      lbImg.style.transform = 'scale(1)';
+    }, 120);
+  }
+
+  lbImg.style.transition = 'opacity 0.2s ease, transform 0.2s ease';
+
+  items.forEach(item => {
+    item.addEventListener('click', () => openLightbox(item));
+  });
+
+  function closeLightbox() {
+    lightbox.classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  document.getElementById('lbClose').addEventListener('click', closeLightbox);
+  document.getElementById('lbBackdrop').addEventListener('click', closeLightbox);
+
+  document.getElementById('lbPrev').addEventListener('click', (e) => {
+    e.stopPropagation();
+    currentIndex = (currentIndex - 1 + visibleItems.length) % visibleItems.length;
+    showLightboxItem(currentIndex);
+  });
+
+  document.getElementById('lbNext').addEventListener('click', (e) => {
+    e.stopPropagation();
+    currentIndex = (currentIndex + 1) % visibleItems.length;
+    showLightboxItem(currentIndex);
+  });
+
+  // Keyboard nav
+  document.addEventListener('keydown', e => {
+    if (!lightbox.classList.contains('open')) return;
+    if (e.key === 'ArrowRight') { currentIndex = (currentIndex + 1) % visibleItems.length; showLightboxItem(currentIndex); }
+    if (e.key === 'ArrowLeft')  { currentIndex = (currentIndex - 1 + visibleItems.length) % visibleItems.length; showLightboxItem(currentIndex); }
+    if (e.key === 'Escape') closeLightbox();
+  });
+
+  // Touch swipe
+  let touchStartX = 0;
+  lbImg.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; });
+  lbImg.addEventListener('touchend', e => {
+    const dx = e.changedTouches[0].clientX - touchStartX;
+    if (dx > 50)  { currentIndex = (currentIndex - 1 + visibleItems.length) % visibleItems.length; showLightboxItem(currentIndex); }
+    if (dx < -50) { currentIndex = (currentIndex + 1) % visibleItems.length; showLightboxItem(currentIndex); }
+  });
+
+  // ── Image filters ──────────────────────────────────
+  document.querySelectorAll('.lb-filter-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.lb-filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const f = btn.dataset.lbFilter;
+      lbImg.style.filter = f === 'none' ? 'none' : f;
+    });
+  });
+</script>
+</body>
+</html>
